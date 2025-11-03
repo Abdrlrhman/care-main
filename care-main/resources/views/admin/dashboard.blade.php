@@ -104,39 +104,73 @@
 
     </div>
 </div>
-@endsection
-
-@section('scripts')
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script>
     const dates = {!! json_encode($dates) !!};
     const counts = {!! json_encode($counts) !!};
 
-    new Chart(document.getElementById('appointmentsChart'), {
-        type: 'line',
-        data: {
-            labels: dates,
-            datasets: [{
-                label: 'المواعيد',
-                data: counts,
-                borderColor: '#3b82f6',
-                backgroundColor: 'rgba(59,130,246,0.1)',
-                tension: 0.3
-            }]
-        },
-        options: {responsive:true, maintainAspectRatio:false}
-    });
+    // رسم المواعيد بدون eval أو new Function
+    const appointmentsChartElem = document.getElementById('appointmentsChart');
+    if (counts.every(function(v){return v === 0;})) {
+        // رسم نص توضيحي بدون أي دوال ديناميكية
+        appointmentsChartElem.height = 250;
+        var ctx = appointmentsChartElem.getContext('2d');
+        ctx.save();
+        ctx.font = '16px Arial';
+        ctx.fillStyle = '#888';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.clearRect(0,0,appointmentsChartElem.width,appointmentsChartElem.height);
+        ctx.fillText('لا توجد بيانات للمواعيد', appointmentsChartElem.width/2, appointmentsChartElem.height/2);
+        ctx.restore();
+    } else {
+        new Chart(appointmentsChartElem, {
+            type: 'line',
+            data: {
+                labels: dates,
+                datasets: [{
+                    label: 'المواعيد',
+                    data: counts,
+                    borderColor: '#3b82f6',
+                    backgroundColor: 'rgba(59,130,246,0.1)',
+                    tension: 0.3
+                }]
+            },
+            options: {responsive:true, maintainAspectRatio:false}
+        });
+    }
 
-    new Chart(document.getElementById('revenueChart'), {
-        type: 'doughnut',
-        data: {
-            labels: ['مدفوع','غير مدفوع'],
-            datasets: [{
-                data: [{{ (float)$paid }}, {{ (float)$unpaid }}],
-                backgroundColor: ['#22c55e','#ef4444']
-            }]
-        },
-        options: {responsive:true, maintainAspectRatio:false}
-    });
+    // رسم الإيرادات بدون eval أو new Function
+    const paidVal = {{ (float)$paid }};
+    const unpaidVal = {{ (float)$unpaid }};
+    const revenueChartElem = document.getElementById('revenueChart');
+    if (paidVal === 0 && unpaidVal === 0) {
+        revenueChartElem.height = 250;
+        var ctx2 = revenueChartElem.getContext('2d');
+        ctx2.save();
+        ctx2.font = '16px Arial';
+        ctx2.fillStyle = '#888';
+        ctx2.textAlign = 'center';
+        ctx2.textBaseline = 'middle';
+        ctx2.clearRect(0,0,revenueChartElem.width,revenueChartElem.height);
+        ctx2.fillText('لا توجد بيانات للإيرادات', revenueChartElem.width/2, revenueChartElem.height/2);
+        ctx2.restore();
+    } else {
+        new Chart(revenueChartElem, {
+            type: 'doughnut',
+            data: {
+                labels: ['مدفوع','غير مدفوع'],
+                datasets: [{
+                    data: [paidVal, unpaidVal],
+                    backgroundColor: ['#22c55e','#ef4444']
+                }]
+            },
+            options: {responsive:true, maintainAspectRatio:false}
+        });
+    }
 </script>
 @endsection
+
+
+
+

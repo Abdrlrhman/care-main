@@ -48,11 +48,13 @@ class InvoicesController extends Controller
                 'paid_at' => now(),
             ]);
 
-            $paid = $invoice->payments()->sum('amount') + $data['amount'];
+            $paid = $invoice->payments()->sum('amount');
             if ($paid >= $invoice->net_total) {
                 $invoice->status = 'paid';
-            } else {
+            } elseif ($paid > 0) {
                 $invoice->status = 'partial';
+            } else {
+                $invoice->status = 'draft';
             }
             $invoice->save();
         });

@@ -16,6 +16,20 @@
                                 class="block w-full rounded bg-gray-100 border border-gray-300 px-4 py-2 text-gray-700 focus:outline-none focus:ring-2 focus:ring-yellow-400"
                                 value="{{ $doctor->specialty }}">
                         </div>
+                        <div class="mb-6 grid grid-cols-2 gap-4">
+                            <div>
+                                <label for="appointment_fee" class="block font-bold mb-1">رسوم الموعد ($)</label>
+                                <input type="number" step="0.01" name="appointment_fee" id="appointment_fee"
+                                    class="block w-full rounded bg-gray-100 border border-gray-300 px-4 py-2 text-gray-700 focus:outline-none focus:ring-2 focus:ring-yellow-400"
+                                    value="{{ $doctor->appointment_fee }}">
+                            </div>
+                            <div>
+                                <label for="profit_share" class="block font-bold mb-1">نسبة الأرباح (%)</label>
+                                <input type="number" step="0.01" name="profit_share" id="profit_share"
+                                    class="block w-full rounded bg-gray-100 border border-gray-300 px-4 py-2 text-gray-700 focus:outline-none focus:ring-2 focus:ring-yellow-400"
+                                    value="{{ $doctor->profit_share }}">
+                            </div>
+                        </div>
                         <div class="mb-6">
                             <label for="phone" class="block font-bold mb-1">الهاتف</label>
                             <input type="text" name="phone" id="phone"

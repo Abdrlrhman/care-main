@@ -9,7 +9,7 @@ use App\Models\User;
 use App\Models\Doctor;
 use Spatie\Permission\Models\Role;
 
-class DoctorSeeder extends Seeder
+class DoctorsSeeder extends Seeder
 {
     public function run(): void
     {

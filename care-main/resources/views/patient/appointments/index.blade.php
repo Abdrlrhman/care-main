@@ -2,17 +2,17 @@
 
 @section('content')
 
-<div class="max-w-6xl mx-auto px-4 py-6">
-    <div class="flex flex-col md:flex-row md:justify-between md:items-center mb-6 gap-2">
-        <h3 class="text-xl font-bold text-blue-700">My Appointments</h3>
+<div class="max-w-6xl mx-auto px-2 py-4">
+    <div class="flex flex-col md:flex-row md:justify-between md:items-center mb-4 gap-2">
+        <h3 class="text-xl font-bold text-blue-700">مواعيدي</h3>
         <form class="flex gap-2" method="get">
             <select name="status" class="border rounded px-3 py-2 text-sm text-gray-700 focus:ring-blue-500">
-                <option value="">All</option>
-                <option value="upcoming" {{ request('status')=='upcoming'?'selected':'' }}>Upcoming</option>
-                <option value="completed" {{ request('status')=='completed'?'selected':'' }}>Completed</option>
-                <option value="cancelled" {{ request('status')=='cancelled'?'selected':'' }}>Cancelled</option>
+                <option value="">كل الحالات</option>
+                <option value="upcoming" {{ request('status')=='upcoming'?'selected':'' }}>قادمة</option>
+                <option value="completed" {{ request('status')=='completed'?'selected':'' }}>مكتملة</option>
+                <option value="cancelled" {{ request('status')=='cancelled'?'selected':'' }}>ملغاة</option>
             </select>
-            <button class="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 transition">Filter</button>
+            <button class="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 transition">تصفية</button>
         </form>
     </div>
 
@@ -20,35 +20,35 @@
         <table class="min-w-full bg-white rounded shadow">
             <thead class="bg-blue-50">
                 <tr>
-                    <th class="px-4 py-2 text-left text-sm font-semibold text-gray-700">Date</th>
-                    <th class="px-4 py-2 text-left text-sm font-semibold text-gray-700">Time</th>
-                    <th class="px-4 py-2 text-left text-sm font-semibold text-gray-700">Doctor</th>
-                    <th class="px-4 py-2 text-left text-sm font-semibold text-gray-700">Specialization</th>
-                    <th class="px-4 py-2 text-left text-sm font-semibold text-gray-700">Status</th>
-                    <th class="px-4 py-2 text-left text-sm font-semibold text-gray-700">Actions</th>
+                    <th class="px-4 py-2 text-right text-sm font-semibold text-gray-700">التاريخ</th>
+                    <th class="px-4 py-2 text-right text-sm font-semibold text-gray-700">الوقت</th>
+                    <th class="px-4 py-2 text-right text-sm font-semibold text-gray-700">الدكتور</th>
+                    <th class="px-4 py-2 text-right text-sm font-semibold text-gray-700">التخصص</th>
+                    <th class="px-4 py-2 text-right text-sm font-semibold text-gray-700">الحالة</th>
+                    <th class="px-4 py-2 text-right text-sm font-semibold text-gray-700">إجراءات</th>
                 </tr>
             </thead>
             <tbody>
                 @foreach($appointments as $a)
                     <tr class="border-b">
-                        <td class="px-4 py-2">{{ $a->starts_at->toDateString() }}</td>
-                        <td class="px-4 py-2">{{ $a->starts_at->format('H:i') }} - {{ $a->ends_at->format('H:i') }}</td>
-                        <td class="px-4 py-2">{{ $a->doctor->name }}</td>
-                        <td class="px-4 py-2">{{ $a->doctor->specialty }}</td>
-                        <td class="px-4 py-2">
+                        <td class="px-4 py-2 text-right">{{ $a->starts_at->toDateString() }}</td>
+                        <td class="px-4 py-2 text-right">{{ $a->starts_at->format('H:i') }} - {{ $a->ends_at->format('H:i') }}</td>
+                        <td class="px-4 py-2 text-right">{{ $a->doctor->name }}</td>
+                        <td class="px-4 py-2 text-right">{{ $a->doctor->specialty }}</td>
+                        <td class="px-4 py-2 text-right">
                             <span class="inline-block px-2 py-1 rounded text-xs font-semibold
                                 @if($a->status=='cancelled') bg-gray-300 text-gray-700
                                 @elseif($a->status=='pending') bg-yellow-100 text-yellow-800
                                 @elseif($a->status=='completed') bg-green-100 text-green-700
                                 @else bg-blue-100 text-blue-700 @endif">
-                                {{ ucfirst($a->status) }}
+                                {{ $a->status=='cancelled' ? 'ملغاة' : ($a->status=='pending' ? 'قيد الانتظار' : ($a->status=='completed' ? 'مكتملة' : 'قادمة')) }}
                             </span>
                         </td>
-                        <td class="px-4 py-2 flex gap-2">
-                            <a class="px-3 py-1 rounded bg-gray-200 text-gray-700 hover:bg-gray-300 text-xs" href="{{ url('/patient/appointments/'.$a->id) }}">View Details</a>
-                            <a class="px-3 py-1 rounded bg-blue-100 text-blue-700 hover:bg-blue-200 text-xs" href="{{ url('/appointments/book?appointment_id='.$a->id) }}">Reschedule</a>
+                        <td class="px-4 py-2 flex gap-2 flex-wrap justify-end">
+                            <a class="px-3 py-1 rounded bg-gray-200 text-gray-700 hover:bg-gray-300 text-xs" href="{{ url('/patient/appointments/'.$a->id) }}">تفاصيل</a>
+                            <a class="px-3 py-1 rounded bg-blue-100 text-blue-700 hover:bg-blue-200 text-xs" href="{{ url('/appointments/book?appointment_id='.$a->id) }}">إعادة جدولة</a>
                             @if($a->status!='cancelled')
-                                <button class="px-3 py-1 rounded bg-red-100 text-red-700 hover:bg-red-200 text-xs" data-bs-toggle="modal" data-bs-target="#cancelModal" data-appt-id="{{ $a->id }}">Cancel</button>
+                                <button class="px-3 py-1 rounded bg-red-100 text-red-700 hover:bg-red-200 text-xs" data-bs-toggle="modal" data-bs-target="#cancelModal" data-appt-id="{{ $a->id }}">إلغاء</button>
                             @endif
                         </td>
                     </tr>
@@ -107,7 +107,10 @@
     </div>
 </div>
 
-document.addEventListener('DOMContentLoaded', function(){
+
+@section('scripts')
+<script>
+    document.addEventListener('DOMContentLoaded', function(){
     var cancelModal = document.getElementById('cancelModal');
     cancelModal.addEventListener('show.bs.modal', function(e){
         var btn = e.relatedTarget;
@@ -117,8 +120,6 @@ document.addEventListener('DOMContentLoaded', function(){
     });
 });
 
-@section('scripts')
-<script>
 document.addEventListener('DOMContentLoaded', function(){
     document.querySelectorAll('[data-bs-toggle="modal"]').forEach(function(btn){
         btn.addEventListener('click', function(){

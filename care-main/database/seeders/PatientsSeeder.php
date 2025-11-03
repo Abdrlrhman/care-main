@@ -14,7 +14,7 @@ class PatientsSeeder extends Seeder
 {
     public function run(): void
     {
-        // تأكد من وجود role باسم "patient"
+        // تأكد من وجود role باسم "user"
         $patientRole = Role::firstOrCreate(['name' => 'user']);
 
         $patientsData = [
@@ -52,8 +52,8 @@ class PatientsSeeder extends Seeder
                 'email_verified_at' => Carbon::now(),
             ]);
 
-            // ربط المستخدم بدور "patient"
-            $user->assignRole('patient');
+            // ربط المستخدم بدور "user"
+            $user->assignRole('user');
 
             // إنشاء المريض المرتبط
             Patient::create([

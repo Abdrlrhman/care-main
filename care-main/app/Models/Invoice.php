@@ -14,15 +14,15 @@ class Invoice extends Model
         'doctor_id',
         'total',
         'net_total',
-    'status',
-    'due_date',
-    'notes',
-    'discount',
+        'status',
+        'due_date',
+        'notes',
+        'discount',
     ];
 
     protected $casts = [
         'due_date' => 'date',
-    'discount' => 'decimal:2',
+        'discount' => 'decimal:2',
     ];
 
     public function patient()
@@ -43,5 +43,10 @@ class Invoice extends Model
     public function payments()
     {
         return $this->hasMany(Payment::class);
+    }
+
+    public function appointment()
+    {
+        return $this->belongsTo(Appointment::class);
     }
 }

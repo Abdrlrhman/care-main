@@ -1,101 +1,101 @@
 @extends('layouts.app')
 
 @section('content')
-<div class="container py-4">
-    <div class="d-flex justify-content-between align-items-center flex-wrap mb-4">
-        <h3 class="mb-2 mb-md-0"><i class="bi bi-receipt me-2"></i> الفواتير</h3>
-        <!-- إذا كان لديك راوت لإنشاء فاتورة، أضفه هنا. وإلا، احذف الزر -->
+<div class="container mx-auto px-2 py-4">
+    <div class="flex flex-col md:flex-row md:justify-between md:items-center mb-4 gap-2">
+        <h3 class="text-lg font-bold flex items-center gap-2 mb-2 md:mb-0">
+            <i class="bi bi-receipt"></i> الفواتير
+        </h3>
         {{-- <a href="{{ route('admin.invoices.create') }}" class="btn btn-sm btn-primary d-flex align-items-center">
             <i class="bi bi-plus-circle me-1"></i> إنشاء فاتورة
         </a> --}}
     </div>
 
     <!-- Filters Form -->
-    <form class="row g-2 mb-4 p-3 bg-white rounded shadow-sm" style="border: 1px solid #e9ecef;">
-        <div class="col-12 col-md-6 col-lg-2">
-            <label class="form-label small fw-bold d-none d-md-block">الحالة</label>
-            <select name="status" class="form-select form-select-sm">
+    <form class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3 mb-4 p-3 bg-white rounded shadow border border-gray-200">
+        <div>
+            <label class="block text-xs font-bold mb-1">الحالة</label>
+            <select name="status" class="block w-full rounded border-gray-300 text-sm py-2 px-2">
                 <option value="">أي حالة</option>
-                <option value="draft" {{ request('status') == 'draft' ? 'selected' : '' }}>مسودة</option>
+                <option value="unpaid" {{ request('status') == 'unpaid' ? 'selected' : '' }}>غير مدفوع</option>
                 <option value="partial" {{ request('status') == 'partial' ? 'selected' : '' }}>جزئي</option>
                 <option value="paid" {{ request('status') == 'paid' ? 'selected' : '' }}>مدفوع</option>
                 <option value="cancelled" {{ request('status') == 'cancelled' ? 'selected' : '' }}>ملغى</option>
             </select>
         </div>
-        <div class="col-12 col-md-6 col-lg-2">
-            <label class="form-label small fw-bold d-none d-md-block">كود الطبيب</label>
-            <input name="doctor_id" value="{{ request('doctor_id') }}" class="form-control form-control-sm" placeholder="كود الطبيب">
+        <div>
+            <label class="block text-xs font-bold mb-1">كود الطبيب</label>
+            <input name="doctor_id" value="{{ request('doctor_id') }}" class="block w-full rounded border-gray-300 text-sm py-2 px-2" placeholder="كود الطبيب">
         </div>
-        <div class="col-12 col-md-6 col-lg-2">
-            <label class="form-label small fw-bold d-none d-md-block">كود المريض</label>
-            <input name="patient_id" value="{{ request('patient_id') }}" class="form-control form-control-sm" placeholder="كود المريض">
+        <div>
+            <label class="block text-xs font-bold mb-1">كود المريض</label>
+            <input name="patient_id" value="{{ request('patient_id') }}" class="block w-full rounded border-gray-300 text-sm py-2 px-2" placeholder="كود المريض">
         </div>
-        <div class="col-12 col-md-6 col-lg-3">
-            <label class="form-label small fw-bold d-none d-md-block">من تاريخ</label>
-            <input name="from" type="date" value="{{ request('from') }}" class="form-control form-control-sm">
+        <div>
+            <label class="block text-xs font-bold mb-1">من تاريخ</label>
+            <input name="from" type="date" value="{{ request('from') }}" class="block w-full rounded border-gray-300 text-sm py-2 px-2">
         </div>
-        <div class="col-12 col-md-6 col-lg-3">
-            <label class="form-label small fw-bold d-none d-md-block">إلى تاريخ</label>
-            <input name="to" type="date" value="{{ request('to') }}" class="form-control form-control-sm">
+        <div>
+            <label class="block text-xs font-bold mb-1">إلى تاريخ</label>
+            <input name="to" type="date" value="{{ request('to') }}" class="block w-full rounded border-gray-300 text-sm py-2 px-2">
         </div>
-        <div class="col-12 text-end mt-2">
-            <button type="submit" class="btn btn-sm btn-outline-primary px-4">تصفية</button>
+        <div class="col-span-1 md:col-span-2 lg:col-span-5 flex justify-end items-center gap-2 mt-2">
+            <button type="submit" class="bg-blue-600 text-white text-sm px-4 py-2 rounded hover:bg-blue-700 transition">تصفية</button>
             @if(request()->anyFilled(['status', 'doctor_id', 'patient_id', 'from', 'to']))
-                <a href="{{ route('admin.invoices.index') }}" class="btn btn-sm btn-link text-decoration-none">إعادة تعيين</a>
+                <a href="{{ route('admin.invoices.index') }}" class="text-blue-600 text-sm underline">إعادة تعيين</a>
             @endif
         </div>
     </form>
 
     <!-- Desktop Table -->
-    <div class="table-responsive d-none d-md-block">
-        <table class="table table-hover align-middle">
-            <thead class="table-light">
+    <div class="hidden md:block overflow-x-auto">
+        <table class="min-w-full bg-white rounded shadow">
+            <thead class="bg-gray-100">
                 <tr>
-                    <th>#</th>
-                    <th>المريض</th>
-                    <th>الطبيب</th>
-                    <th>الإجمالي</th>
-                    <th>الصافي</th>
-                    <th>الحالة</th>
-                    <th>تاريخ الاستحقاق</th>
-                    <th class="text-center">إجراءات</th>
+                    <th class="px-3 py-2 text-right text-xs font-bold">#</th>
+                    <th class="px-3 py-2 text-right text-xs font-bold">المريض</th>
+                    <th class="px-3 py-2 text-right text-xs font-bold">الطبيب</th>
+                    <th class="px-3 py-2 text-right text-xs font-bold">الإجمالي</th>
+                    <th class="px-3 py-2 text-right text-xs font-bold">الصافي</th>
+                    <th class="px-3 py-2 text-right text-xs font-bold">الحالة</th>
+                    <th class="px-3 py-2 text-right text-xs font-bold">تاريخ الاستحقاق</th>
+                    <th class="px-3 py-2 text-center text-xs font-bold">إجراءات</th>
                 </tr>
             </thead>
             <tbody>
                 @forelse($invoices as $inv)
-                <tr>
-                    <td class="fw-bold">#{{ $inv->id }}</td>
-                    <td>{{ $inv->patient->name ?? '<span class="text-muted">غير محدد</span>' }}</td>
-                    <td>{{ $inv->doctor->name ?? '<span class="text-muted">غير محدد</span>' }}</td>
-                    <td>{{ number_format($inv->total, 2) }} ر.س</td>
-                    <td class="fw-bold text-success">{{ number_format($inv->net_total, 2) }} ر.س</td>
-                    <td>
+                <tr class="border-b">
+                    <td class="px-3 py-2 font-bold text-right">#{{ $inv->id }}</td>
+                    <td class="px-3 py-2 text-right">{!! $inv->patient->name ?? '<span class="text-gray-400">غير محدد</span>' !!}</td>
+                    <td class="px-3 py-2 text-right">{!! $inv->doctor->name ?? '<span class="text-gray-400">غير محدد</span>' !!}</td>
+                    <td class="px-3 py-2 text-right">{{ number_format($inv->total, 2) }} ر.س</td>
+                    <td class="px-3 py-2 font-bold text-green-600 text-right">{{ number_format($inv->net_total, 2) }} ر.س</td>
+                    <td class="px-3 py-2 text-right">
                         @php
                             $badgeClass = [
-                                'draft' => 'bg-secondary',
-                                'partial' => 'bg-warning',
-                                'paid' => 'bg-success',
-                                'cancelled' => 'bg-danger'
-                            ][$inv->status] ?? 'bg-light text-dark';
+                                'unpaid' => 'bg-gray-900',
+                                'partial' => 'bg-yellow-400',
+                                'paid' => 'bg-green-600',
+                                'cancelled' => 'bg-red-600'
+                            ][$inv->status] ?? 'bg-gray-200 text-gray-800';
                         @endphp
-                        <span class="badge {{ $badgeClass }} text-white text-uppercase">{{ $inv->status }}</span>
+                        <span class="inline-block px-2 py-1 rounded text-xs font-bold text-white {{ $badgeClass }}">{{ $inv->status }}</span>
                     </td>
-                    <td>{{ $inv->due_date ? $inv->due_date->format('Y-m-d') : '<span class="text-muted">—</span>' }}</td>
-                    <td class="text-end">
-                        <a href="{{ route('admin.invoices.show', $inv->id) }}" class="btn btn-sm btn-outline-secondary px-3">
+                    <td class="px-3 py-2 text-right">{!! $inv->due_date ? $inv->due_date->format('Y-m-d') : '<span class="text-gray-400">—</span>' !!}</td>
+                    <td class="px-3 py-2 text-center">
+                        <a href="{{ route('admin.invoices.show', $inv->id) }}" class="bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs px-3 py-1 rounded transition">
                             <i class="bi bi-eye"></i> عرض
                         </a>
-
                         @if($inv->status !== 'cancelled' && $inv->status !== 'paid')
-                            <form method="POST" action="{{ route('admin.invoices.add_payment', $inv->id) }}" class="d-inline-block ms-1">
+                            <form method="POST" action="{{ route('admin.invoices.add_payment', $inv->id) }}" class="inline-block ml-1">
                                 @csrf
-                                <button type="submit" class="btn btn-sm btn-info px-3" onclick="return confirm('هل تريد إضافة دفعة لهذه الفاتورة؟')">
+                                <button type="submit" class="bg-blue-500 hover:bg-blue-600 text-white text-xs px-3 py-1 rounded transition" onclick="return confirm('هل تريد إضافة دفعة لهذه الفاتورة؟')">
                                     <i class="bi bi-cash"></i> دفعة
                                 </button>
                             </form>
-                            <form method="POST" action="{{ route('admin.invoices.cancel', $inv->id) }}" class="d-inline-block ms-1">
+                            <form method="POST" action="{{ route('admin.invoices.cancel', $inv->id) }}" class="inline-block ml-1">
                                 @csrf
-                                <button type="submit" class="btn btn-sm btn-danger px-3" onclick="return confirm('هل أنت متأكد من إلغاء هذه الفاتورة؟')">
+                                <button type="submit" class="bg-red-500 hover:bg-red-600 text-white text-xs px-3 py-1 rounded transition" onclick="return confirm('هل أنت متأكد من إلغاء هذه الفاتورة؟')">
                                     <i class="bi bi-x-circle"></i> إلغاء
                                 </button>
                             </form>
@@ -104,7 +104,7 @@
                 </tr>
                 @empty
                 <tr>
-                    <td colspan="8" class="text-center py-4 text-muted">لا توجد فواتير مطابقة للتصفية الحالية.</td>
+                    <td colspan="8" class="text-center py-4 text-gray-400">لا توجد فواتير مطابقة للتصفية الحالية.</td>
                 </tr>
                 @endforelse
             </tbody>
@@ -112,49 +112,51 @@
     </div>
 
     <!-- Mobile Cards -->
-    <div class="d-md-none">
+    <div class="md:hidden">
         @forelse($invoices as $inv)
-        <div class="card mb-3 shadow-sm border-0">
-            <div class="card-body p-3">
-                <div class="d-flex justify-content-between align-items-start mb-2">
+        <div class="bg-white rounded shadow mb-3 border border-gray-200">
+            <div class="p-3">
+                <div class="flex justify-between items-start mb-2">
                     <div>
-                        <h6 class="mb-1 fw-bold">فاتورة #{{ $inv->id }}</h6>
-                        <div class="small text-muted">
-                            <i class="bi bi-person me-1"></i> {{ $inv->patient->name ?? '—' }}<br>
-                            <i class="bi bi-stethoscope me-1"></i> {{ $inv->doctor->name ?? '—' }}
+                        <h6 class="mb-1 font-bold text-base">فاتورة #{{ $inv->id }}</h6>
+                        <div class="text-xs text-gray-500">
+                            <i class="bi bi-person mr-1"></i> {{ $inv->patient->name ?? '—' }}<br>
+                            <i class="bi bi-stethoscope mr-1"></i> {{ $inv->doctor->name ?? '—' }}
                         </div>
                     </div>
                     <div class="text-end">
-                        <div class="fw-bold text-success">{{ number_format($inv->net_total, 2) }} ر.س</div>
-                        <span class="badge {{ [
-                            'draft' => 'bg-secondary',
-                            'partial' => 'bg-warning',
-                            'paid' => 'bg-success',
-                            'cancelled' => 'bg-danger'
-                        ][$inv->status] ?? 'bg-light text-dark' }} text-white text-uppercase small">
+                        <div class="font-bold text-green-600">{{ number_format($inv->net_total, 2) }} ر.س</div>
+                        <span class="inline-block px-2 py-1 rounded text-xs font-bold text-white
+                            {{
+                                [
+                                    'unpaid' => 'bg-gray-900',
+                                    'partial' => 'bg-yellow-400',
+                                    'paid' => 'bg-green-600',
+                                    'cancelled' => 'bg-red-600'
+                                ][$inv->status] ?? 'bg-gray-200 text-gray-800'
+                            }}">
                             {{ $inv->status }}
                         </span>
                     </div>
                 </div>
-                <div class="d-flex justify-content-between align-items-center small text-muted mb-2">
-                    <span><i class="bi bi-calendar me-1"></i> {{ $inv->due_date ? $inv->due_date->format('Y-m-d') : '—' }}</span>
-                    <span><i class="bi bi-cash me-1"></i> {{ number_format($inv->total, 2) }} ر.س</span>
+                <div class="flex justify-between items-center text-xs text-gray-500 mb-2">
+                    <span><i class="bi bi-calendar mr-1"></i> {{ $inv->due_date ? $inv->due_date->format('Y-m-d') : '—' }}</span>
+                    <span><i class="bi bi-cash mr-1"></i> {{ number_format($inv->total, 2) }} ر.س</span>
                 </div>
-                <div class="d-flex justify-content-end gap-2 mt-2 flex-wrap">
-                    <a href="{{ route('admin.invoices.show', $inv->id) }}" class="btn btn-sm btn-outline-secondary flex-grow-1">
+                <div class="flex flex-col gap-2 mt-2">
+                    <a href="{{ route('admin.invoices.show', $inv->id) }}" class="bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs px-3 py-2 rounded transition w-full text-center">
                         <i class="bi bi-eye"></i> عرض
                     </a>
-
                     @if($inv->status !== 'cancelled' && $inv->status !== 'paid')
-                        <form method="POST" action="{{ route('admin.invoices.add_payment', $inv->id) }}" class="d-inline-block w-100 mt-2">
+                        <form method="POST" action="{{ route('admin.invoices.add_payment', $inv->id) }}" class="w-full">
                             @csrf
-                            <button type="submit" class="btn btn-sm btn-info w-100" onclick="return confirm('هل تريد إضافة دفعة لهذه الفاتورة؟')">
+                            <button type="submit" class="bg-blue-500 hover:bg-blue-600 text-white text-xs px-3 py-2 rounded transition w-full" onclick="return confirm('هل تريد إضافة دفعة لهذه الفاتورة؟')">
                                 <i class="bi bi-cash"></i> إضافة دفعة
                             </button>
                         </form>
-                        <form method="POST" action="{{ route('admin.invoices.cancel', $inv->id) }}" class="d-inline-block w-100 mt-2">
+                        <form method="POST" action="{{ route('admin.invoices.cancel', $inv->id) }}" class="w-full">
                             @csrf
-                            <button type="submit" class="btn btn-sm btn-danger w-100" onclick="return confirm('هل أنت متأكد من إلغاء هذه الفاتورة؟')">
+                            <button type="submit" class="bg-red-500 hover:bg-red-600 text-white text-xs px-3 py-2 rounded transition w-full" onclick="return confirm('هل أنت متأكد من إلغاء هذه الفاتورة؟')">
                                 <i class="bi bi-x-circle"></i> إلغاء الفاتورة
                             </button>
                         </form>
@@ -163,7 +165,7 @@
             </div>
         </div>
         @empty
-        <div class="text-center py-5 text-muted">
+        <div class="text-center py-5 text-gray-400">
             <i class="bi bi-receipt mb-2" style="font-size: 2rem;"></i>
             <div>لا توجد فواتير</div>
         </div>

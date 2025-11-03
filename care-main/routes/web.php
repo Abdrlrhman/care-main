@@ -1,81 +1,74 @@
 <?php
 
+use App\Http\Controllers\AppointmentController;
+use App\Http\Controllers\Auth\PatientRegisterController;
 use Illuminate\Support\Facades\Route;
-use Illuminate\Support\Facades\Auth;
 
 Route::get('/', function () {
     return view('welcome');
 });
-    
-// مسار API للمواعيد متاح للواجهة فقط بدون تحقق صلاحيات
-Route::get('/admin/appointments/api', [App\Http\Controllers\Admin\AppointmentsController::class, 'apiList']);
+Route::get('/register-patient', [PatientRegisterController::class, 'create'])->name('register.patient');
+Route::post('/register-patient', [PatientRegisterController::class, 'store'])->name('register.patient.store');
+
+Route::middleware('auth')->group(function () {
+    Route::get('/appointments/create', [AppointmentController::class, 'create'])->name('appointments.create');
+    Route::post('/appointments', [AppointmentController::class, 'store'])->name('appointments.store');
+
+    // جلب السلوطات: ممكن ترجع يوم واحد أو الأسبوع لو ما في date
+    Route::get('/appointments/{doctor}/slots', [AppointmentController::class, 'slots'])->name('appointments.slots');
+
+    Route::get('/appointments', [AppointmentController::class, 'index'])->name('appointments.index');
+    Route::post('/appointments/{appointment}/cancel', [AppointmentController::class, 'cancel'])->name('appointments.cancel');
+});
+Route::middleware(['auth', 'role:admin|staff'])->group(function () {
+    Route::get('appointments/{appointment}/edit', [\App\Http\Controllers\AppointmentController::class, 'edit'])->name('appointments.edit');
+    Route::delete('appointments/{appointment}', [\App\Http\Controllers\AppointmentController::class, 'destroy'])->name('appointments.destroy');
+    Route::put('appointments/{appointment}', [\App\Http\Controllers\AppointmentController::class, 'update'])->name('appointments.update');
+});
+
+// مسارات لوحة تحكم الادمن
 
 Route::middleware(['auth', 'role:admin'])->group(function () {
-    Route::get('/admin/dashboard', function () {
-        return view('admin_dashboard');
-    })->name('admin.dashboard');
-
+    // لوحة التحكم الرئيسية
     Route::get('/admin', [App\Http\Controllers\AdminDashboardController::class, 'index'])->name('admin.index');
     Route::get('/admin/dashboard', [App\Http\Controllers\AdminDashboardController::class, 'index'])->name('admin.dashboard');
 
-    // 1. تسجيل موارد الطبيب مع استثناء المسار 'index' لأنه سيُستخدم من كونترولر آخر
-Route::resource('/admin/doctors', App\Http\Controllers\DoctorController::class)
-    ->names([
-        'create' => 'admin.doctors.create',
-        'store' => 'admin.doctors.store',
-        'edit' => 'admin.doctors.edit',
-        'update' => 'admin.doctors.update',
-        'destroy' => 'admin.doctors.destroy',
-        'show' => 'admin.doctors.show',
-    ])
-    ->parameters(['doctors' => 'doctor'])
-    ->except(['index']); // 👈 استثناء المسار index حتى لا يتعارض
+    Route::get('/admin/doctors', [App\Http\Controllers\Admin\DoctorsDirectoryController::class, 'index'])->name('admin.doctors.index');
+    Route::get('/admin/doctors/directory', [App\Http\Controllers\Admin\DoctorsDirectoryController::class, 'index'])->name('admin.doctors.directory');
+    Route::get('/admin/doctors/{doctor}/working-hours/edit', [App\Http\Controllers\DoctorWorkingHoursController::class, 'edit'])->name('admin.doctors.working-hours.edit');
+    Route::post('/admin/doctors/{doctor}/working-hours', [App\Http\Controllers\DoctorWorkingHoursController::class, 'store'])->name('admin.doctors.working-hours.store');
 
-// 2. تسجيل مسار index بشكل منفصل مع الكونترولر الجديد
-Route::get('/admin/doctors', [App\Http\Controllers\Admin\DoctorsDirectoryController::class, 'index'])
-    ->name('admin.doctors.index');
-
-    
-    Route::resource('/admin/appointments', App\Http\Controllers\AppointmentController::class)->names([
-        'index' => 'admin.appointments.index',
-        'create' => 'admin.appointments.create',
-        'store' => 'admin.appointments.store',
-        'edit' => 'admin.appointments.edit',
-        'update' => 'admin.appointments.update',
-        'destroy' => 'admin.appointments.destroy',
-    ])->parameters(['appointments' => 'appointment']);
-    // Appointments management UI
-    Route::get('/admin/appointments/management', [App\Http\Controllers\Admin\AppointmentsController::class, 'index'])->name('admin.appointments.management');
-    Route::get('/admin/appointments/api', [App\Http\Controllers\Admin\AppointmentsController::class, 'apiList']);
-    Route::post('/admin/appointments/{appointment}/cancel', [App\Http\Controllers\Admin\AppointmentsController::class, 'cancel']);
-    Route::post('/admin/appointments/{appointment}/reassign', [App\Http\Controllers\Admin\AppointmentsController::class, 'reassign']);
-    // start visit from an appointment
-    Route::get('/admin/appointments/{appointment}/start', [App\Http\Controllers\AppointmentController::class, 'start'])->name('admin.appointments.start');
-    Route::get('/admin/users', function () {
-        return view('admin.users');
-    })->name('admin.users');
-    Route::get('/admin/permissions', function () {
-        return view('admin.permissions');
-    })->name('admin.permissions');
-    // patients
+    // إدارة المرضى
     Route::get('/admin/patients/create', [App\Http\Controllers\PatientsController::class, 'create'])->name('admin.patients.create');
     Route::post('/admin/patients', [App\Http\Controllers\PatientsController::class, 'store'])->name('admin.patients.store');
-    // Admin Patients Directory
     Route::get('/admin/patients', [App\Http\Controllers\Admin\PatientsDirectoryController::class, 'index'])->name('admin.patients.index');
     Route::post('/admin/patients/{patient}/deactivate', [App\Http\Controllers\Admin\PatientsDirectoryController::class, 'deactivate'])->name('admin.patients.deactivate');
-    Route::get('/admin/patients/{patient}', function($id){
-        // minimal show page placeholder; can be expanded to a full profile
+    Route::get('/admin/patients/{patient}', function ($id) {
         $patient = App\Models\Patient::with('medicalRecords')->findOrFail($id);
+
         return view('admin.patients.show', compact('patient'));
     })->name('admin.patients.show');
+    // ادارة الموظفين
+
+    Route::resource('/admin/staff', App\Http\Controllers\Admin\StaffController::class)->names([
+        'index' => 'admin.staff.index',
+        'create' => 'admin.staff.create',
+        'store' => 'admin.staff.store',
+        'show' => 'admin.staff.show',
+        'edit' => 'admin.staff.edit',
+        'update' => 'admin.staff.update',
+        'destroy' => 'admin.staff.destroy',
+    ])->parameters(['staff' => 'staff']);
+
+    // إدارة السجلات الطبية
     Route::post('/admin/medical-records', [App\Http\Controllers\MedicalRecordsController::class, 'store'])->name('admin.medical_records.store');
     Route::post('/admin/medical-records/{medicalRecord}/attachments', [App\Http\Controllers\MedicalRecordsController::class, 'uploadAttachment'])->name('admin.medical_records.attachments');
-    // Medical record editor
     Route::get('/admin/medical-records/create', [App\Http\Controllers\MedicalRecordEditorController::class, 'create'])->name('admin.medical_records.create');
     Route::get('/admin/medical-records/{medicalRecord}/edit', [App\Http\Controllers\MedicalRecordEditorController::class, 'edit'])->name('admin.medical_records.edit');
     Route::post('/admin/medical-records/save', [App\Http\Controllers\MedicalRecordEditorController::class, 'store'])->name('admin.medical_records.save');
     Route::put('/admin/medical-records/{medicalRecord}', [App\Http\Controllers\MedicalRecordEditorController::class, 'update'])->name('admin.medical_records.update');
-    // user management
+
+    // إدارة المستخدمين والصلاحيات
     Route::get('/admin/users', [App\Http\Controllers\Admin\UsersController::class, 'index'])->name('admin.users.index');
     Route::get('/admin/users/create', [App\Http\Controllers\Admin\UsersController::class, 'create'])->name('admin.users.create');
     Route::post('/admin/users', [App\Http\Controllers\Admin\UsersController::class, 'store'])->name('admin.users.store');
@@ -83,43 +76,45 @@ Route::get('/admin/doctors', [App\Http\Controllers\Admin\DoctorsDirectoryControl
     Route::post('/admin/users/{user}/deactivate', [App\Http\Controllers\Admin\UsersController::class, 'deactivate'])->name('admin.users.deactivate');
     Route::post('/admin/users/{user}/reset-password', [App\Http\Controllers\Admin\UsersController::class, 'resetPassword'])->name('admin.users.reset_password');
     Route::put('/admin/users/{user}', [App\Http\Controllers\Admin\UsersController::class, 'update'])->name('admin.users.update');
-    // Doctors Directory (admin)
-    Route::get('/admin/doctors/directory', [App\Http\Controllers\Admin\DoctorsDirectoryController::class, 'index'])->name('admin.doctors.directory');
+    Route::get('/admin/permissions', function () {
+        return view('admin.permissions');
+    })->name('admin.permissions');
 
-    // Allow admins to edit a doctor's working hours via the doctor's working hours controller
-    Route::get('/admin/doctors/{doctor}/working-hours/edit', [App\Http\Controllers\DoctorWorkingHoursController::class, 'edit'])->name('admin.doctors.working-hours.edit');
-    Route::post('/admin/doctors/{doctor}/working-hours', [App\Http\Controllers\DoctorWorkingHoursController::class, 'store'])->name('admin.doctors.working-hours.store');
-    // Services management
-    Route::resource('/admin/services', App\Http\Controllers\Admin\ServicesController::class)->names([
-        'index' => 'admin.services.index',
-        'store' => 'admin.services.store',
-        'update' => 'admin.services.update',
-        'destroy' => 'admin.services.destroy',
-    ])->parameters(['services' => 'service']);
+    // إدارة الخدمات
+    Route::resource('/admin/services', App\Http\Controllers\Admin\ServicesController::class)
+        ->only(['index', 'store', 'update', 'destroy'])
+        ->names('admin.services')
+        ->parameters(['services' => 'service']);
     Route::post('/admin/services/{service}/toggle', [App\Http\Controllers\Admin\ServicesController::class, 'toggleActive'])->name('admin.services.toggle');
-    // Admin invoices & payments
+
+    // إدارة الفواتير والمدفوعات
     Route::get('/admin/invoices', [App\Http\Controllers\Admin\InvoicesController::class, 'index'])->name('admin.invoices.index');
     Route::get('/admin/invoices/{invoice}', [App\Http\Controllers\Admin\InvoicesController::class, 'show'])->name('admin.invoices.show');
     Route::post('/admin/invoices/{invoice}/payments', [App\Http\Controllers\Admin\InvoicesController::class, 'addPayment'])->name('admin.invoices.add_payment');
     Route::post('/admin/invoices/{invoice}/cancel', [App\Http\Controllers\Admin\InvoicesController::class, 'cancel'])->name('admin.invoices.cancel');
 
-    // Reports & Analytics
+    // التقارير والتحليلات
     Route::get('/admin/reports', [App\Http\Controllers\Admin\ReportsController::class, 'index'])->name('admin.reports.index');
-    Route::get('/admin/reports/revenue', [App\Http\Controllers\Admin\ReportsController::class, 'revenueByMonth']);
+    Route::get('/admin/reports/revenue', [App\Http\Controllers\Admin\ReportsController::class, 'revenueByMonth'])->name('admin.reports.revenue');
     Route::get('/admin/reports/appointments-specialty', [App\Http\Controllers\Admin\ReportsController::class, 'appointmentsBySpecialization']);
     Route::get('/admin/reports/services-usage', [App\Http\Controllers\Admin\ReportsController::class, 'servicesUsage']);
     Route::get('/admin/reports/export/{report}', [App\Http\Controllers\Admin\ReportsController::class, 'exportCsv']);
 
-    // System Settings
+    // إعدادات النظام
     Route::get('/admin/settings', [App\Http\Controllers\Admin\SettingsController::class, 'index'])->name('admin.settings.index');
     Route::post('/admin/settings', [App\Http\Controllers\Admin\SettingsController::class, 'store'])->name('admin.settings.store');
     Route::post('/admin/settings/reset', [App\Http\Controllers\Admin\SettingsController::class, 'resetDefaults'])->name('admin.settings.reset');
+    // إدارة الأطباء
+    Route::resource('/admin/doctors', App\Http\Controllers\DoctorController::class)->except(['index'])->names([
+        'create' => 'admin.doctors.create',
+        'store' => 'admin.doctors.store',
+        'edit' => 'admin.doctors.edit',
+        'update' => 'admin.doctors.update',
+        'destroy' => 'admin.doctors.destroy',
+        'show' => 'admin.doctors.show',
+    ])
+        ->parameters(['doctors' => 'doctor']);
 });
-
-
-
-
-
 
 // doctor routes (role:doctor)
 Route::middleware(['auth', 'role:doctor'])->group(function () {
@@ -155,6 +150,8 @@ Route::middleware(['auth', 'role:doctor'])->group(function () {
     Route::post('/doctor/invoices/{invoice}/payments', [App\Http\Controllers\InvoicesController::class, 'recordPayment'])->name('doctor.invoices.payments');
 });
 
+// staff routes (role:staff)
+
 Route::middleware(['auth', 'role:staff'])->group(function () {
     Route::get('/staff/dashboard', function () {
         return view('staff_dashboard');
@@ -162,17 +159,6 @@ Route::middleware(['auth', 'role:staff'])->group(function () {
 
     // Staff dashboard
     Route::get('/staff/dashboard', [App\Http\Controllers\Staff\StaffDashboardController::class, 'index'])->name('staff.dashboard');
-    Route::post('/staff/appointments/{appointment}/checkin', [App\Http\Controllers\Staff\StaffDashboardController::class, 'checkIn'])->name('staff.appointments.checkin');
-    Route::post('/staff/appointments/{appointment}/cancel', [App\Http\Controllers\Staff\StaffDashboardController::class, 'cancel'])->name('staff.appointments.cancel');
-});
-
-// Staff appointment management routes (role:staff)
-Route::middleware(['auth', 'role:staff'])->group(function () {
-    Route::get('/staff/appointments', [App\Http\Controllers\Staff\AppointmentController::class, 'index'])->name('staff.appointments.index');
-    Route::post('/staff/appointments', [App\Http\Controllers\Staff\AppointmentController::class, 'store'])->name('staff.appointments.store');
-    Route::get('/staff/appointments/{appointment}/edit', [App\Http\Controllers\Staff\AppointmentController::class, 'edit'])->name('staff.appointments.edit');
-    Route::put('/staff/appointments/{appointment}', [App\Http\Controllers\Staff\AppointmentController::class, 'update'])->name('staff.appointments.update');
-    Route::delete('/staff/appointments/{appointment}', [App\Http\Controllers\Staff\AppointmentController::class, 'destroy'])->name('staff.appointments.destroy');
 
     // Staff patient management
     Route::get('/staff/patients', [App\Http\Controllers\Staff\PatientController::class, 'index'])->name('staff.patients.index');
@@ -200,14 +186,6 @@ Route::middleware(['auth', 'role:staff'])->group(function () {
 // patient routes (authenticated users with patient profile)
 Route::middleware(['auth'])->group(function () {
     Route::get('/patient/dashboard', [App\Http\Controllers\PatientDashboardController::class, 'index'])->name('patient.dashboard');
-
-    Route::get('/appointments/book', [App\Http\Controllers\BookAppointmentController::class, 'index'])->name('appointments.book');
-    Route::get('/appointments/api/doctors', [App\Http\Controllers\BookAppointmentController::class, 'apiDoctors']);
-    Route::get('/appointments/api/slots', [App\Http\Controllers\BookAppointmentController::class, 'apiSlots']);
-    Route::post('/appointments/book', [App\Http\Controllers\BookAppointmentController::class, 'store'])->name('appointments.store');
-    // patient appointments
-    Route::get('/patient/appointments', [App\Http\Controllers\PatientAppointmentsController::class, 'index'])->name('patient.appointments.index');
-    Route::post('/patient/appointments/{appointment}/cancel', [App\Http\Controllers\PatientAppointmentsController::class, 'cancel'])->name('patient.appointments.cancel');
     // patient medical records
     Route::get('/patient/medical-records', [App\Http\Controllers\PatientMedicalRecordsController::class, 'index'])->name('patient.medical_records.index');
     Route::get('/patient/medical-records/{medicalRecord}', [App\Http\Controllers\PatientMedicalRecordsController::class, 'show'])->name('patient.medical_records.show');
@@ -224,7 +202,4 @@ Route::middleware(['auth'])->group(function () {
     Route::put('/patient/profile', [App\Http\Controllers\PatientProfileController::class, 'update'])->name('patient.profile.update');
 });
 
-
-
 require __DIR__.'/auth.php';
-  

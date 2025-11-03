@@ -18,58 +18,99 @@
 
         <!-- زر العودة وبدء الزيارة -->
         <div class="flex gap-2 mb-6">
-            <a href="{{ route('admin.patients.index') }}" class="flex-1 px-4 py-2 border border-gray-300 text-gray-700 text-sm font-medium rounded-lg text-center hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-500 transition-colors">
+            <a href="{{ route('admin.patients.index') }}" class="flex-1 px-4 py-2 border border-gray-300 text-gray-700 text-sm font-medium rounded-lg text-center hover:bg-gray-50">
                 رجوع
             </a>
-            <button id="startVisitBtn" class="px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-lg shadow hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition-all flex-1">
-                بدء زيارة
-            </button>
+
+            <!-- زر التوجيه لرابط بداء زياره مع ارسال ايدي المريض في الرابط   -->
+            <a href="{{ route('appointments.create', ['patient_id' => $patient->id]) }}" id="startVisitBtn" class="flex-1 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg text-center hover:bg-blue-700">
+                بدء زيارة جديدة </a>
         </div>
 
-        <!-- نافذة اختيار الطبيب والموعد -->
-        <div id="visitModal" class="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50 hidden">
+        <!-- مودال بدء الزيارة -->
+        <div id="visitModal" class="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50 hidden" aria-hidden="true">
             <div class="bg-white rounded-xl shadow-lg p-6 w-full max-w-md">
-                <h2 class="text-lg font-bold mb-4">اختيار الطبيب والموعد</h2>
-                <form id="visitForm">
-                    <div class="mb-4">
-                        <label class="block mb-2 text-sm font-medium">اختر الطبيب:</label>
-                        <select id="doctorSelect" name="doctor_id" class="w-full border rounded-lg px-3 py-2">
+                <h2 class="text-lg font-bold mb-4">اختيار الطبيب والتاريخ</h2>
+
+                <!-- FORM لتحميل المواعيد (GET) -->
+                <form id="loadSlotsForm" method="GET" action="{{ url()->current() }}" class="mb-4">
+                    <input type="hidden" name="patient_id" value="{{ $patient->id }}">
+                    <div class="mb-3">
+                        <label class="block mb-2 text-sm font-medium">اختر الطبيب</label>
+                        <select name="doctor_id" class="w-full border rounded-lg px-3 py-2" required>
                             <option value="">-- اختر الطبيب --</option>
-                            @foreach(App\Models\Doctor::all() as $doc)
-                                <option value="{{ $doc->id }}">{{ $doc->name }}</option>
+                            @foreach(App\Models\Doctor::orderBy('name')->get() as $doc)
+                                <option value="{{ $doc->id }}" {{ request('doctor_id') == $doc->id ? 'selected' : '' }}>
+                                    {{ $doc->name }}
+                                </option>
                             @endforeach
                         </select>
                     </div>
-                    <div class="mb-4">
-                        <label class="block mb-2 text-sm font-medium">اختر موعد فارغ:</label>
-                        <select id="slotSelect" name="starts_at" class="w-full border rounded-lg px-3 py-2">
-                            <option value="">-- اختر موعد --</option>
-                        </select>
+
+                    <div class="mb-3">
+                        <label class="block mb-2 text-sm font-medium">اختر اليوم</label>
+                        <input type="date" name="date" value="{{ request('date', now()->toDateString()) }}" class="w-full border rounded-lg px-3 py-2" required>
                     </div>
+
                     <div class="flex gap-2">
-                        <button type="submit" class="px-4 py-2 bg-green-600 text-white rounded-lg font-medium">بدء الزيارة</button>
-                        <button type="button" id="closeVisitModal" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg font-medium">إلغاء</button>
+                        <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-lg">عرض المواعيد</button>
+                        <button type="button" id="closeVisitModalTop" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg">إغلاق</button>
                     </div>
                 </form>
+
+                <!-- لو السيرفر رجع availableSlots (شكل: مصفوفة من عناصر فيها appointment_id, starts_at, ends_at) -->
+                @if(isset($availableSlots) && is_array($availableSlots) && count($availableSlots) > 0)
+                    <div class="mb-4">
+                        <h3 class="mb-2 font-medium">المواعيد المتاحة</h3>
+
+                        <form method="POST" action="{{ route('admin.medical_records.store') }}" id="visitFormServer">
+                            @csrf
+                            <input type="hidden" name="patient_id" value="{{ $patient->id }}">
+
+                            <div class="mb-3">
+                                <label class="block mb-2 text-sm font-medium">اختر موعد فارغ</label>
+                                <select name="appointment_id" class="w-full border rounded-lg px-3 py-2" required>
+                                    <option value="">-- اختر موعد --</option>
+                                    @foreach($availableSlots as $slot)
+                                        {{-- slot: ['id'=>..., 'starts_at'=>..., 'ends_at'=>...] أو ['appointment_id', 'starts_at'...] --}}
+                                        @php
+                                            $aid = $slot['id'] ?? $slot['appointment_id'] ?? null;
+                                            $starts = \Carbon\Carbon::parse($slot['starts_at'])->format('Y-m-d H:i');
+                                            $label = \Carbon\Carbon::parse($slot['starts_at'])->format('H:i') . ' - ' . \Carbon\Carbon::parse($slot['ends_at'])->format('H:i') . ' • ' . \Carbon\Carbon::parse($slot['starts_at'])->format('d/m/Y');
+                                        @endphp
+                                        <option value="{{ $aid }}">{{ $label }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+
+                            <div class="flex gap-2">
+                                <button type="submit" class="px-4 py-2 bg-green-600 text-white rounded-lg">بدء الزيارة</button>
+                                <button type="button" id="closeVisitModalBottom" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg">إلغاء</button>
+                            </div>
+                        </form>
+                    </div>
+                @else
+                    <p class="text-sm text-gray-500">لا توجد مواعيد محملة بعد. استخدم 'عرض المواعيد' لتحميل المواعيد المتاحة من السيرفر.</p>
+                @endif
+
             </div>
         </div>
 
-        <!-- التبويبات العمودية (مثالية للجوال) -->
+        <!-- التبويبات العمودية -->
         <div class="border-b border-gray-200 mb-6">
             <nav class="flex flex-col space-y-1">
-                <button class="w-full text-left px-4 py-3 bg-blue-50 text-blue-700 font-medium text-sm rounded-lg border border-blue-200 text-center" data-tab="overview">نظرة عامة</button>
-                <button class="w-full text-left px-4 py-3 text-gray-700 font-medium text-sm rounded-lg border border-gray-200 text-center hover:bg-gray-50 transition-colors" data-tab="appointments">المواعيد</button>
-                <button class="w-full text-left px-4 py-3 text-gray-700 font-medium text-sm rounded-lg border border-gray-200 text-center hover:bg-gray-50 transition-colors" data-tab="records">السجلات الطبية</button>
-                <button class="w-full text-left px-4 py-3 text-gray-700 font-medium text-sm rounded-lg border border-gray-200 text-center hover:bg-gray-50 transition-colors" data-tab="prescriptions">الوصفات</button>
-                <button class="w-full text-left px-4 py-3 text-gray-700 font-medium text-sm rounded-lg border border-gray-200 text-center hover:bg-gray-50 transition-colors" data-tab="billing">الفوترة</button>
+                <button class="tab-btn w-full text-left px-4 py-3 bg-blue-50 text-blue-700 font-medium text-sm rounded-lg border border-blue-200" data-tab="overview">نظرة عامة</button>
+                <button class="tab-btn w-full text-left px-4 py-3 text-gray-700 font-medium text-sm rounded-lg border border-gray-200" data-tab="appointments">المواعيد</button>
+                <button class="tab-btn w-full text-left px-4 py-3 text-gray-700 font-medium text-sm rounded-lg border border-gray-200" data-tab="records">السجلات الطبية</button>
+                <button class="tab-btn w-full text-left px-4 py-3 text-gray-700 font-medium text-sm rounded-lg border border-gray-200" data-tab="prescriptions">الوصفات</button>
+                <button class="tab-btn w-full text-left px-4 py-3 text-gray-700 font-medium text-sm rounded-lg border border-gray-200" data-tab="billing">الفوترة</button>
             </nav>
         </div>
 
-        <!-- محتوى التبويبات (عمودي - واحد فقط ظاهر في وقت واحد) -->
-        <div class="space-y-4">
-
+        <!-- محتوى التبويبات -->
+        <div>
             <!-- نظرة عامة -->
-            <div class="tab-pane active" id="overview">
+            <div class="tab-pane" id="overview">
                 <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-4 mb-4">
                     <h3 class="font-semibold text-gray-800 mb-3">الموعد القادم</h3>
                     @php
@@ -110,7 +151,7 @@
             <div class="tab-pane hidden" id="appointments">
                 <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
                     <h3 class="font-semibold text-gray-800 mb-3">المواعيد</h3>
-                    @forelse($patient->appointments()->with('doctor.user')->orderByDesc('starts_at')->get() as $a)
+                    @forelse($patient->appointments()->with('doctor')->orderByDesc('starts_at')->get() as $a)
                         <div class="border-b border-gray-100 pb-3 mb-3 last:border-b-0">
                             <div class="flex justify-between items-start">
                                 <div>
@@ -120,11 +161,11 @@
                                 <span class="inline-block px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded-full">{{ $a->status }}</span>
                             </div>
                             <div class="flex gap-2 mt-3">
-                                <a href="{{ route('admin.appointments.edit', $a->id) }}" class="flex-1 px-3 py-1 bg-gray-100 text-gray-700 text-xs rounded-lg text-center hover:bg-gray-200 transition-colors">تعديل</a>
-                                <form method="POST" action="{{ route('admin.appointments.destroy', $a->id) }}" class="flex-1" onsubmit="return confirm('هل أنت متأكد من إلغاء هذا الموعد؟')">
+                                <a href="{{ route('appointments.edit', $a->id) }}" class="flex-1 px-3 py-1 bg-gray-100 text-gray-700 text-xs rounded-lg text-center">تعديل</a>
+                                <form method="POST" action="{{ route('appointments.destroy', $a->id) }}" class="flex-1" onsubmit="return confirm('هل أنت متأكد من إلغاء هذا الموعد؟')">
                                     @csrf
                                     @method('DELETE')
-                                    <button type="submit" class="w-full px-3 py-1 bg-red-100 text-red-800 text-xs rounded-lg text-center hover:bg-red-200 transition-colors">إلغاء</button>
+                                    <button type="submit" class="w-full px-3 py-1 bg-red-100 text-red-800 text-xs rounded-lg text-center">إلغاء</button>
                                 </form>
                             </div>
                         </div>
@@ -151,12 +192,11 @@
                                 </button>
                             </div>
 
-                            <!-- مرفقات السجل -->
                             <div id="attach-{{ $r->id }}" class="mt-3 p-3 bg-gray-50 rounded-lg hidden">
                                 <form action="{{ route('admin.medical_records.attachments', $r->id) }}" method="POST" enctype="multipart/form-data" class="mb-3">
                                     @csrf
                                     <input type="file" name="files[]" multiple class="w-full text-xs border border-gray-300 rounded-lg mb-2">
-                                    <button type="submit" class="w-full px-3 py-1 bg-blue-600 text-white text-xs rounded-lg hover:bg-blue-700 transition-colors">رفع</button>
+                                    <button type="submit" class="w-full px-3 py-1 bg-blue-600 text-white text-xs rounded-lg">رفع</button>
                                 </form>
 
                                 @if($r->attachments && count($r->attachments) > 0)
@@ -214,7 +254,7 @@
                                 <p class="text-xs text-gray-600">{{ number_format($inv->net_total, 2) }} ر.س • {{ $inv->status }}</p>
                                 <p class="text-xs text-gray-500">استحقاق: {{ optional($inv->due_date)->format('d/m/Y') }}</p>
                             </div>
-                            <a href="#" class="px-3 py-1 bg-gray-100 text-gray-700 text-xs rounded-lg hover:bg-gray-200 transition-colors">عرض</a>
+                            <a href="#" class="px-3 py-1 bg-gray-100 text-gray-700 text-xs rounded-lg">عرض</a>
                         </div>
                     @empty
                         <p class="text-sm text-gray-500 text-center py-4">لا توجد فواتير</p>
@@ -226,104 +266,38 @@
     </div>
 </main>
 
+<!-- أقل قدر من JS: فتح/قفل المودال وتبديل التابز وتوغل المرفقات -->
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Tab switching
-    const tabs = document.querySelectorAll('[data-tab]');
-    const tabPanes = document.querySelectorAll('.tab-pane');
+  
 
-    tabs.forEach(tab => {
-        tab.addEventListener('click', () => {
-            // Hide all tabs
-            tabPanes.forEach(pane => pane.classList.add('hidden'));
-            tabs.forEach(t => t.classList.remove('bg-blue-50', 'text-blue-700', 'border-blue-200'));
-
-            // Show selected tab
-            document.getElementById(tab.dataset.tab).classList.remove('hidden');
-            tab.classList.add('bg-blue-50', 'text-blue-700', 'border-blue-200');
-        });
-    });
+    
+    // Tabs
+    const tabBtns = document.querySelectorAll('.tab-btn');
+    const panes = document.querySelectorAll('.tab-pane');
+    function showTab(id) {
+        panes.forEach(p => p.classList.add('hidden'));
+        tabBtns.forEach(b => b.classList.remove('bg-blue-50','text-blue-700','border-blue-200'));
+        document.getElementById(id).classList.remove('hidden');
+        document.querySelector(`[data-tab="${id}"]`)?.classList.add('bg-blue-50','text-blue-700','border-blue-200');
+    }
+    // default
+    showTab('overview');
+    tabBtns.forEach(btn => btn.addEventListener('click', () => showTab(btn.dataset.tab)));
 
     // Toggle attachments
     document.querySelectorAll('.toggle-attachments').forEach(btn => {
         btn.addEventListener('click', () => {
-            const target = document.querySelector(btn.dataset.target);
-            target.classList.toggle('hidden');
+            const tgt = document.querySelector(btn.dataset.target);
+            tgt && tgt.classList.toggle('hidden');
         });
     });
-
-    // Start Visit Button
-    // نافذة بدء زيارة
-    const visitModal = document.getElementById('visitModal');
-    const doctorSelect = document.getElementById('doctorSelect');
-    const slotSelect = document.getElementById('slotSelect');
-    const visitForm = document.getElementById('visitForm');
-    document.getElementById('startVisitBtn').addEventListener('click', function() {
-        visitModal.classList.remove('hidden');
-    });
-    document.getElementById('closeVisitModal').addEventListener('click', function() {
-        visitModal.classList.add('hidden');
-        doctorSelect.value = '';
-        slotSelect.innerHTML = '<option value="">-- اختر موعد --</option>';
-    });
-
-    doctorSelect.addEventListener('change', function() {
-        slotSelect.innerHTML = '<option value="">جاري التحميل...</option>';
-        fetch('/admin/appointments/api?doctor_id=' + doctorSelect.value)
-            .then(res => res.json())
-            .then(data => {
-                slotSelect.innerHTML = '<option value="">-- اختر موعد --</option>';
-                if (Array.isArray(data)) {
-                    data.filter(a => a.status === 'free').forEach(a => {
-                        slotSelect.innerHTML += `<option value="${a.starts_at}">${a.starts_at} - ${a.ends_at}</option>`;
-                    });
-                }
-            });
-    });
-
-    visitForm.addEventListener('submit', function(e) {
-        e.preventDefault();
-        const doctor_id = doctorSelect.value;
-        const starts_at = slotSelect.value;
-        if (!doctor_id || !starts_at) {
-            alert('يرجى اختيار الطبيب والموعد.');
-            return;
-        }
-        fetch('{{ route('admin.medical_records.store') }}', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': '{{ csrf_token() }}'
-            },
-            body: JSON.stringify({
-                patient_id: {{ $patient->id }},
-                doctor_id: doctor_id,
-                visit_date: starts_at
-            })
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data && data.id) {
-                window.location.href = '/admin/medical-records/' + data.id + '/edit';
-            } else {
-                alert('حدث خطأ أثناء بدء الزيارة.');
-            }
-        })
-        .catch(() => {
-            alert('تعذر الاتصال بالخادم. حاول مرة أخرى.');
-        });
-    });
-
-    // Initialize default tab
-    document.getElementById('overview').classList.remove('hidden');
-    document.querySelector('[data-tab="overview"]').classList.add('bg-blue-50', 'text-blue-700', 'border-blue-200');
 });
 </script>
 
 <style>
-    .tab-pane {
-        display: none;
-    }
+    .tab-pane.hidden { display: none; }
+    .tab-pane { display: block; }
 </style>
 
 @endsection
